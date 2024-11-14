@@ -1,14 +1,18 @@
-import Header from "./components/header"
+import { BrowserRouter, Route, Routes } from "react-router-dom"
+import Layout from "./layout"
 import Home from "./components/home"
+import TravelRoute from "./components/travelRoute"
 
 const App = () => {
    return (
-      <div className="h-[100vh] w-[100vw] flex flex-col m-0">
-         <Header />
-         <div className="flex-grow bg-[#0B0B0B]">
-            <Home />
-         </div>
-      </div>
+      <BrowserRouter>
+         <Routes>
+            <Route path="/" element={<Layout />}>
+               <Route index element={<Home />} />
+               <Route path="/travel" element={<TravelRoute />} />
+            </Route>
+         </Routes>
+      </BrowserRouter>
    )
 }
 
