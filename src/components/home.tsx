@@ -5,6 +5,9 @@ import LocationInput from "./locationInput"
 import { cn } from "../utils/cn"
 import ProfileInput from "./profileInput"
 import LocationList from "./locationList"
+import axios from "axios"
+import { useNavigate } from "react-router-dom"
+import Spinner from "./spinner"
 
 const TOKEN = import.meta.env.VITE_MAPBOX
 
@@ -18,6 +21,9 @@ function Home() {
    const [primaryMarker, setPrimaryMarker] = useState<Marker>()
    const [primaryMarkerName, setPrimaryMarkerName] = useState<string>()
    const [profile, setProfile] = useState<string>("driving")
+   const [priority, setPriority] = useState<string>("distance")
+   const [loading, setLoading] = useState(false)
+   const navigate = useNavigate()
 
    const [activeStep, setActiveStep] = useState(1)
    const handleNext = () => {
@@ -30,10 +36,28 @@ function Home() {
       setInputValue("")
    }
 
+   const fetchData = async () => {
+      setLoading(true)
+      let lngLat = primaryMarker?.getLngLat()
+      const coordinates = [[lngLat?.lng, lngLat?.lat]]
+      markers.forEach((marker) => {
+         lngLat = marker.getLngLat()
+         coordinates.push([lngLat.lng, lngLat.lat])
+      })
+      // console.log(coordinates)
+      const res = await axios.post("http://localhost:3000/api/coordinates", {
+         coordinates,
+         profile,
+         priority,
+         names: [primaryMarkerName, ...markerNames],
+      })
+      // console.log(res.data)
+      navigate("/travel", { state: res.data })
+   }
+
    // eslint-disable-next-line @typescript-eslint/no-explicit-any
    const handleRetrieve = (result: any) => {
-      console.log("retrieve")
-      console.log(result.properties.name)
+      // console.log(result)
       if (result && mapRef.current) {
          const coordinates = result.geometry.coordinates
          const newMarker = new mapboxgl.Marker({
@@ -52,12 +76,12 @@ function Home() {
             setMarkers((prevMarkers) => [...prevMarkers, newMarker])
             setMarkerNames((prevNames) => [
                ...prevNames,
-               result.properties.name,
+               result.properties.full_address,
             ])
          } else {
             if (primaryMarkerName) primaryMarker?.remove()
             setPrimaryMarker(newMarker)
-            setPrimaryMarkerName(result.properties.name)
+            setPrimaryMarkerName(result.properties.full_address)
          }
          setInputValue("")
       }
@@ -83,7 +107,7 @@ function Home() {
       })
    }
 
-   const submit = () => console.log("submit")
+   const submit = () => fetchData()
 
    useEffect(() => {
       if (!mapContainerRef.current) return
@@ -105,6 +129,13 @@ function Home() {
          if (mapRef.current) mapRef.current.remove()
       }
    }, [])
+
+   if (loading)
+      return (
+         <div className="h-[100%] w-[100%] flex items-center justify-center">
+            <Spinner />
+         </div>
+      )
 
    return (
       <div className="h-[100%] w-[100%] flex gap-10 p-10 items-center">
@@ -166,12 +197,17 @@ function Home() {
             )}
             {activeStep === 3 && (
                <div className="text-white px-5 capitalize text-lg">
-                  Step 3: Select mode
+                  Step 3: Select mode & preference
                </div>
             )}
             {activeStep === 3 && (
                <div className="px-5 h-[400px] space-y-2">
-                  <ProfileInput profile={profile} setProfile={setProfile} />
+                  <ProfileInput
+                     profile={profile}
+                     setProfile={setProfile}
+                     priority={priority}
+                     setPriority={setPriority}
+                  />
                </div>
             )}
             {activeStep != 3 && (
